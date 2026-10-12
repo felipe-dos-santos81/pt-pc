@@ -6,6 +6,7 @@ build/
 Build/
 
 *.pkg
+*.psarc
 *.bin
 !/third_party/texture_models/realesr-general-x4v3-x2.bin
 *.elf
@@ -39,6 +40,7 @@ Build/
 *.til
 *.bndb
 
+.DS_Store
 __pycache__/
 *.pyc
 /build/

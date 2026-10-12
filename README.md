@@ -117,32 +117,56 @@ Mods
 
 ## Building from source
 
-Windows: Visual Studio 2022 Build Tools, LLVM (clang-cl), the Vulkan SDK, CMake 3.28 and Ninja. Then
+CMake fetches the dependencies (SDL3, zlib, volk, VMA, glm, Dear ImGui, stb, Lua 5.1, libogg, libvorbis, whisper.cpp)
+and downloads the Whisper and Silero models, each checked by SHA-256. Every build needs CMake 3.28 and Ninja.
+
+### Windows
+
+Visual Studio 2022 Build Tools, LLVM (clang-cl) and the Vulkan SDK.
 
     tools\build_pt.bat release
 
-gives `build\release\pt.exe`. CMake fetches the dependencies (SDL3, zlib, volk, VMA, glm, Dear ImGui, stb, Lua 5.1,
-libogg, libvorbis, whisper.cpp) and downloads the Whisper and Silero models and the upscaler SDK files, each checked by
-SHA-256. A failed SDK download leaves that upscaler out; `-DPT_UPSCALERS=OFF` builds without any. `python
-tools\package.py` turns the build into the portable folder and zip.
+gives `build\release\pt.exe`. The upscaler SDK files are downloaded too: a failed download leaves that upscaler out, and
+`-DPT_UPSCALERS=OFF` builds without any. `python tools\package.py` turns the build into the portable folder and zip.
 
-Linux: `cmake -G Ninja -B build/linux -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build/linux --target pt`.
-GCC 13 or clang 17, the Vulkan headers and `glslc`. The upscalers are Windows-only SDKs and are left out there.
-`tools/linux/` has the cross build I use from Windows. More in docs/linux.md.
+### Linux
 
-macOS (Apple silicon or Intel, built for the CPU it runs on): the command line tools, then `brew install cmake ninja shaderc
-vulkan-headers vulkan-loader` and `cmake -G Ninja -B build/macos -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build
-build/macos --target pt`. `python3 tools/macos/make_app.py` makes the app bundle and its zip. The Windows upscalers and the
-VR mode are left out there too, and MoltenVK has no ray queries. The macOS build upscales with Apple MetalFX; on Apple silicon
-with macOS 26 or newer it can also interpolate one frame between rendered frames (experimental). `-DPT_METALFX=OFF` leaves
-both out. More in docs/macos.md.
+GCC 13 or clang 17, the Vulkan headers and `glslc`.
+
+    cmake -G Ninja -B build/linux -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    cmake --build build/linux --target pt
+
+The upscalers are Windows-only SDKs and are left out. `tools/linux/` has the cross build I use from Windows. More in
+docs/linux.md.
+
+### macOS
+
+Xcode's command line tools and Homebrew, on Apple silicon or Intel. The build is for the CPU it runs on.
+
+    make run game=<your extracted CUSA01127 folder>
+
+installs the Homebrew packages it needs, configures, builds `build/macos/pt` and starts it in a window. `make help` lists
+every target, `test` and `app` (the app bundle and its zip) among them.
+
+On macOS the pointer is not locked to the window in play: the mouse still looks around, but the pointer stays visible
+and free to leave, and the camera stops turning at the window's edge. `--mouse-lock` (`make run lock=1`) locks it as on
+Windows and Linux, where `--no-mouse-lock` gives the macOS behaviour.
+
+Without make: `brew install cmake ninja shaderc vulkan-headers vulkan-loader`, then the two Linux commands with
+`build/macos`. The Windows upscalers and the VR mode are left out, and MoltenVK has no ray queries. Upscaling is Apple
+MetalFX; on Apple silicon with macOS 26 or newer it can also interpolate one frame between rendered frames
+(experimental). `-DPT_METALFX=OFF` leaves both out. More in docs/macos.md.
+
+### Tests
 
 The unit tests are CMake targets (`pt_tests`, `pt_mods_test` and the others in CMakeLists.txt). `python
 tools/walkthrough.py --exe build/release/pt.exe --game <folder>` plays the whole game without a window through the
 scripted routes in `tests/walkthrough/` and checks the log; it is how I make sure a change did not break a loop.
 
-The installer is `installer/`: a native C++ setup (`pt_setup`, built when a payload exists) and a small LGPL extraction
-helper in C# that reads fake PKGs with LibOrbisPkg. docs/installer.md describes how it decides what it accepts.
+### Installer
+
+`installer/` holds a native C++ setup (`pt_setup`, built when a payload exists) and a small LGPL extraction helper in C#
+that reads fake PKGs with LibOrbisPkg. docs/installer.md describes how it decides what it accepts.
 
 Other docs: docs/upscaling.md, docs/vr.md, docs/updates.md, and the file format notes in docs/formats/ that came out of
 reverse engineering the game data, with the tools in tools/ that read those formats.

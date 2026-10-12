@@ -109,6 +109,12 @@ struct Options {
     bool dev_ui = false;
     bool validation = false;
     bool vsync = true;
+    // macOS leaves the pointer free in play by default (docs/macos.md); --mouse-lock and --no-mouse-lock choose anywhere
+#ifdef __APPLE__
+    bool mouse_lock = false;
+#else
+    bool mouse_lock = true;
+#endif
     std::filesystem::path screenshot;
     int frames = 3;
     bool script_test = false;
@@ -208,6 +214,8 @@ constexpr OptionSpec kOptionSpecs[] = {
     {"--vr", 0, "the experimental VR mode (an OpenXR runtime and a headset; docs/vr.md)"},
     {"--no-vr", 0, "no VR mode whatever pt.ini says"},
     {"--no-vsync", 0, "present without v-sync"},
+    {"--mouse-lock", 0, "confine the pointer to the window in play (the default except on macOS)"},
+    {"--no-mouse-lock", 0, "mouse look without confining the pointer to the window (it stops turning at the window's edge; the macOS default)"},
     {"--width", 1, "<pixels> window or render width"},
     {"--height", 1, "<pixels> window or render height"},
     {"--debug", 0, "debug panel and developer UI"},
@@ -424,6 +432,10 @@ Options ParseOptions(int argc, char** argv) {
         } else if (arg == "--no-vsync") {
             options.vsync = false;
             options.vsync_set = true;
+        } else if (arg == "--mouse-lock") {
+            options.mouse_lock = true;
+        } else if (arg == "--no-mouse-lock") {
+            options.mouse_lock = false;
         } else if (arg == "--mods" && has_value) {
             options.mods_dir = pt::os::PathFromUtf8(argv[++i]);
         } else if (arg == "--no-mods") {
@@ -4179,7 +4191,11 @@ int RunGame(App& app, pt::Vfs& vfs) {
                                       (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS);
             if (want_capture != mouse_capture_requested) {
                 mouse_capture_requested = want_capture;
-                if (want_capture) {
+                if (want_capture && !options.mouse_lock) {
+                    // no lock: the look comes from the pointer's own motion over the window, which stays free to leave it
+                    mouse_captured = true;
+                    pt::LogInfo("input: mouse look without pointer lock");
+                } else if (want_capture) {
                     const bool relative = SDL_SetWindowRelativeMouseMode(app.window, true);
                     const std::string relative_error = relative ? std::string{} : SDL_GetError();
                     const bool grabbed = relative || SDL_SetWindowMouseGrab(app.window, true);
