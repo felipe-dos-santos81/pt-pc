@@ -42,5 +42,5 @@ The log is the evidence. The game writes one line per milestone (input, floor, m
   (`docs/macos.md`, mouse in play).
 - **A PKG is not a game folder.** `--game` wants `chunk1.psarc` and `texture.qar` (`pathid_list_ps4.bin` beside them
   enables the enhanced textures). The extraction helper in `installer/Extractor` opens fake PKGs only and refuses store
-  PKGs by design (`docs/installer.md`). It is not part of the macOS build, but it builds there with the .NET 10 SDK,
-  following the LibOrbisPkg steps in `tools/ci/release.py`.
+  PKGs by design (`docs/installer.md`). It is not part of the macOS build: `make extractor` builds it there with the .NET 10
+  SDK (`tools/make_extractor.py`, the LibOrbisPkg steps of `tools/ci/release.py`).

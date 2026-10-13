@@ -1044,15 +1044,21 @@ def load_route(names, shots=None):
 
 
 def voice_input(work, text):
-    """A Windows SAPI voice saying text once in 6 s of quiet room noise (about -70 dBFS), 16 kHz mono."""
+    """The system's voice (Windows SAPI, macOS say) saying text once in 6 s of quiet room noise (about -70 dBFS), 16 kHz mono."""
     import random
     import struct
     import wave
     spoken = work / "spoken.wav"
-    script = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
-              "$f = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, 16, 1); "
-              f"$s.SetOutputToWaveFile('{spoken}', $f); $s.Speak('{text}'); $s.Dispose()")
-    subprocess.run(["powershell", "-NoProfile", "-Command", script], check=True, stdout=subprocess.DEVNULL)
+    if sys.platform == "win32":
+        script = ("Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; "
+                  "$f = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, 16, 1); "
+                  f"$s.SetOutputToWaveFile('{spoken}', $f); $s.Speak('{text}'); $s.Dispose()")
+        subprocess.run(["powershell", "-NoProfile", "-Command", script], check=True, stdout=subprocess.DEVNULL)
+    elif sys.platform == "darwin":
+        # say writes the wav the recognizer's input wants when told the data format (docs/macos.md, credits)
+        subprocess.run(["say", "-o", str(spoken), "--data-format=LEI16@16000", text], check=True)
+    else:
+        raise RuntimeError("the voice scenario needs a speech synthesizer: Windows SAPI or macOS say")
     with wave.open(str(spoken)) as w:
         word = struct.unpack(f"<{w.getnframes()}h", w.readframes(w.getnframes()))
     rng = random.Random(1)

@@ -8,7 +8,7 @@ BUILD_DIR = build/macos
 BREW_DEPS = cmake ninja shaderc vulkan-headers vulkan-loader
 type ?= RelWithDebInfo
 
-.PHONY: help install clean configure build run app test
+.PHONY: help install clean configure build run app test extractor
 
 # ── Environment ──────────────────────────────────────────────────────────────
 
@@ -60,6 +60,10 @@ app: build ## [STEP 4] Make dist/P.T. PC Port.app and its zip, replacing the las
 	python3 tools/macos/make_app.py --build $(BUILD_DIR)
 
 # ── Development ───────────────────────────────────────────────────────────────
+
+# The fake-PKG extraction helper is not part of the game's build: .NET 10 SDK and git, LibOrbisPkg cloned into build/ once.
+extractor: ## Build PT.PkgExtract for this Mac into build/extractor-<rid>/ (liborbis=<LibOrbisPkg clone> to skip the clone)
+	python3 tools/make_extractor.py $(if $(liborbis),--liborbis "$(liborbis)")
 
 test: $(BUILD_DIR)/build.ninja ## Build and run the pt_tests unit tests and the crash handler test
 	cmake --build $(BUILD_DIR) --target pt_tests pt_crash_report_test

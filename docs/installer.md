@@ -10,7 +10,7 @@ taken from what the player selects, on the player's PC.
 |---|---|---|---|
 | `pt_setup.exe` (shipped as `P.T.PC.Port.Setup.exe`) | `installer/Native/setup.cpp`, CMake target `pt_setup` | C++20, Win32 API | the installer: window, checks, payload unpack, install |
 | `PT.PkgExtract.exe` | `installer/Extractor/Program.cs` | C#, .NET 10 self-contained, LGPL-3.0-or-later | reads a fake PKG with LibOrbisPkg and writes the three archives |
-| LibOrbisPkg | upstream `maxton/LibOrbisPkg`, patched by `tools/patch_liborbis_readers.py` | C#, LGPL | PKG and PFS reader used by the helper |
+| LibOrbisPkg | upstream `maxton/LibOrbisPkg` at commit `6434772` (2020-07-26, the one `tools/make_extractor.py` pins), patched by `tools/patch_liborbis_readers.py` | C#, LGPL | PKG and PFS reader used by the helper |
 | extractor tests | `installer/Tests/Program.cs` | C# | builds a synthetic fake PKG with LibOrbisPkg and checks extraction, refusals |
 
 The extraction helper is a separate executable on purpose: it is LGPL, so it stays a replaceable program next to the

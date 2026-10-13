@@ -21,8 +21,10 @@ what has been tried on a Mac is in the credits below.
    that hasn't been notarised](https://support.apple.com/en-gb/102445).
 3. On the first start a folder dialog asks for your extracted CUSA01127 folder (the one with `chunk1.psarc` and
    `texture.qar`). The choice is remembered. A `CUSA01127` or `game/CUSA01127` folder next to the app is found without
-   asking, and `pt --game <folder>` (`P.T. PC Port.app/Contents/MacOS/pt`) still works. A fake PKG cannot be used on
-   macOS: the extraction helper of the installers is not built for it, so extract the PKG on Windows or Linux first.
+   asking, and `pt --game <folder>` (`P.T. PC Port.app/Contents/MacOS/pt`) still works. A fake PKG is extracted with the
+   installers' helper, which the app does not carry: with the .NET 10 SDK and git, `make extractor` builds it here from an
+   upstream LibOrbisPkg clone (tools/make_extractor.py), then `build/extractor-osx-arm64/PT.PkgExtract <pkg> <empty folder>`
+   writes the game folder. Store PKGs are refused by design (docs/installer.md). Or extract on Windows or Linux first.
 4. macOS asks once for the microphone, for the part of the game that listens for the word. `[voice] key = J` in `pt.ini`
    works here too.
 
@@ -114,8 +116,9 @@ zips have no loop browser previews; the game shoots them at the browser's first 
 
 - Apple silicon: ahm3texe (LoreanXavier/pt-pc pull request 4), M4, macOS 27: the 22 unit tests and the 28 walkthrough
   scenarios; the bundle played the first room and the hallway. Not tried on M1 or M2 or on an older macOS.
-- Apple silicon, M3 Max, macOS 27.0.1 (this repository): 300 frames headless, the hello walkthrough, and a window with HDR
-  (the built-in XDR display) and MetalFX Quality, 2133x1200 to 3200x1800 at 60 fps.
+- Apple silicon, M3 Max, macOS 27.0.1 (this repository): 300 frames headless, the hello and voice walkthroughs (the voice
+  scenario's spoken word comes from `say` here), and a window with HDR (the built-in XDR display) and MetalFX Quality,
+  2133x1200 to 3200x1800 at 60 fps.
 - ignusloki (github.com/ignusloki/pt-pc, `codex/macos-arm64-port`, preview 1 to 3): Apple silicon, M1 Pro. From that fork
   come the `SO_NOSIGPIPE` socket option, the check for missing GPU features, enabling the portability subset's features and
   the no-pause-before-the-first-tick fix. Their native macOS installer and the Fast Walk option are not part of this port.
