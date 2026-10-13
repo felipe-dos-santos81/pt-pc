@@ -49,8 +49,8 @@ build: $(BUILD_DIR)/build.ninja ## [STEP 2] Build the game, configuring first wh
 
 # Windowed is pt.ini's default and a free pointer is the macOS default. Without game=, the game looks for its folder
 # and asks once when it finds none.
-run: build ## [STEP 3] Run in a window, pointer free (game=<extracted CUSA01127 folder> lock=1 args="...")
-	$(BUILD_DIR)/pt $(if $(game),--game "$(subst ~/,$(HOME)/,$(game))") $(if $(lock),--mouse-lock) $(args)
+run: build ## [STEP 3] Run in a window (game=<extracted CUSA01127 folder> args="--mouse-lock ...")
+	$(BUILD_DIR)/pt $(if $(game),--game "$(subst ~/,$(HOME)/,$(game))") $(args)
 
 # ── Stage 4 · App bundle ─────────────────────────────────────────────────────
 

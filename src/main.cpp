@@ -100,6 +100,12 @@ constexpr bool kReleaseLocks = true;
 #else
 constexpr bool kReleaseLocks = false;
 #endif
+// macOS leaves the pointer free in play (docs/macos.md); --mouse-lock and --no-mouse-lock choose anywhere
+#ifdef __APPLE__
+constexpr bool kMouseLock = false;
+#else
+constexpr bool kMouseLock = true;
+#endif
 
 struct Options {
     std::filesystem::path game_dir = "game/CUSA01127";
@@ -109,12 +115,7 @@ struct Options {
     bool dev_ui = false;
     bool validation = false;
     bool vsync = true;
-    // macOS leaves the pointer free in play by default (docs/macos.md); --mouse-lock and --no-mouse-lock choose anywhere
-#ifdef __APPLE__
-    bool mouse_lock = false;
-#else
-    bool mouse_lock = true;
-#endif
+    bool mouse_lock = kMouseLock;
     std::filesystem::path screenshot;
     int frames = 3;
     bool script_test = false;
@@ -215,7 +216,7 @@ constexpr OptionSpec kOptionSpecs[] = {
     {"--no-vr", 0, "no VR mode whatever pt.ini says"},
     {"--no-vsync", 0, "present without v-sync"},
     {"--mouse-lock", 0, "confine the pointer to the window in play (the default except on macOS)"},
-    {"--no-mouse-lock", 0, "mouse look without confining the pointer to the window (it stops turning at the window's edge; the macOS default)"},
+    {"--no-mouse-lock", 0, "mouse look with the pointer free to leave the window (the macOS default)"},
     {"--width", 1, "<pixels> window or render width"},
     {"--height", 1, "<pixels> window or render height"},
     {"--debug", 0, "debug panel and developer UI"},

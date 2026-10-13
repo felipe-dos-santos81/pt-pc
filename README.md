@@ -148,14 +148,11 @@ Xcode's command line tools and Homebrew, on Apple silicon or Intel. The build is
 installs the Homebrew packages it needs, configures, builds `build/macos/pt` and starts it in a window. `make help` lists
 every target, `test` and `app` (the app bundle and its zip) among them.
 
-On macOS the pointer is not locked to the window in play: the mouse still looks around, but the pointer stays visible
-and free to leave, and the camera stops turning at the window's edge. `--mouse-lock` (`make run lock=1`) locks it as on
-Windows and Linux, where `--no-mouse-lock` gives the macOS behaviour.
+In play the pointer is not locked to the window on macOS; `--mouse-lock` (`make run args=--mouse-lock`) locks it.
 
-Without make: `brew install cmake ninja shaderc vulkan-headers vulkan-loader`, then the two Linux commands with
-`build/macos`. The Windows upscalers and the VR mode are left out, and MoltenVK has no ray queries. Upscaling is Apple
-MetalFX; on Apple silicon with macOS 26 or newer it can also interpolate one frame between rendered frames
-(experimental). `-DPT_METALFX=OFF` leaves both out. More in docs/macos.md.
+The Windows upscalers and the VR mode are left out, and MoltenVK has no ray queries. Upscaling is Apple MetalFX; on
+Apple silicon with macOS 26 or newer it can also interpolate one frame between rendered frames (experimental).
+`-DPT_METALFX=OFF` leaves both out. The commands without make and the rest are in docs/macos.md.
 
 ### Tests
 
