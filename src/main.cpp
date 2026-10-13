@@ -100,12 +100,6 @@ constexpr bool kReleaseLocks = true;
 #else
 constexpr bool kReleaseLocks = false;
 #endif
-// macOS leaves the pointer free in play (docs/macos.md); --mouse-lock and --no-mouse-lock choose anywhere
-#ifdef __APPLE__
-constexpr bool kMouseLock = false;
-#else
-constexpr bool kMouseLock = true;
-#endif
 
 struct Options {
     std::filesystem::path game_dir = "game/CUSA01127";
@@ -115,7 +109,8 @@ struct Options {
     bool dev_ui = false;
     bool validation = false;
     bool vsync = true;
-    bool mouse_lock = kMouseLock;
+    bool mouse_lock = true;
+    bool mouse_lock_set = false;
     std::filesystem::path screenshot;
     int frames = 3;
     bool script_test = false;
@@ -215,8 +210,8 @@ constexpr OptionSpec kOptionSpecs[] = {
     {"--vr", 0, "the experimental VR mode (an OpenXR runtime and a headset; docs/vr.md)"},
     {"--no-vr", 0, "no VR mode whatever pt.ini says"},
     {"--no-vsync", 0, "present without v-sync"},
-    {"--mouse-lock", 0, "confine the pointer to the window in play (the default except on macOS)"},
-    {"--no-mouse-lock", 0, "mouse look with the pointer free to leave the window (the macOS default)"},
+    {"--mouse-lock", 0, "hold the pointer in the window in play whatever pt.ini says"},
+    {"--no-mouse-lock", 0, "mouse look with the pointer free to leave the window whatever pt.ini says"},
     {"--width", 1, "<pixels> window or render width"},
     {"--height", 1, "<pixels> window or render height"},
     {"--debug", 0, "debug panel and developer UI"},
@@ -433,10 +428,9 @@ Options ParseOptions(int argc, char** argv) {
         } else if (arg == "--no-vsync") {
             options.vsync = false;
             options.vsync_set = true;
-        } else if (arg == "--mouse-lock") {
-            options.mouse_lock = true;
-        } else if (arg == "--no-mouse-lock") {
-            options.mouse_lock = false;
+        } else if (arg == "--mouse-lock" || arg == "--no-mouse-lock") {
+            options.mouse_lock = arg == "--mouse-lock";
+            options.mouse_lock_set = true;
         } else if (arg == "--mods" && has_value) {
             options.mods_dir = pt::os::PathFromUtf8(argv[++i]);
         } else if (arg == "--no-mods") {
@@ -1451,6 +1445,7 @@ void DrawSettingsWindow(App& app, pt::InputDevice& input, pt::game::GameSound& s
     changed |= ImGui::Checkbox("Vsync (next start)", &s.display.vsync);
     changed |= ImGui::Checkbox("Pause when the window loses focus", &s.display.pause_on_focus_loss);
     changed |= ImGui::Checkbox("Mute when in background", &s.display.mute_in_background);
+    changed |= ImGui::Checkbox("Hold the pointer in the window in play", &s.input.mouse_lock);
     if (ImGui::SliderFloat("Mouse sensitivity", &s.input.mouse_sensitivity, 0.1f, 5.0f, "%.2f", ImGuiSliderFlags_Logarithmic)) {
         input.settings.mouse_sensitivity = pt::InputSettings{}.mouse_sensitivity * s.input.mouse_sensitivity;
         changed = true;
@@ -2124,6 +2119,7 @@ public:
             }
             mouse.wrap = false;
             controls.rows.push_back(std::move(mouse));
+            controls.rows.push_back(Row(kMouseLock, "pc_mouse_lock", OffOn(), s.input.mouse_lock ? 1 : 0, "pc_note_mouse_lock"));
         } else {
             pt::game::PcSettingRow gamepad = Row(kGamepadSensitivity, "pc_gamepad_sensitivity", {},
                                                   Nearest(kGamepadSensitivitySteps, s.input.gamepad_sensitivity),
@@ -2341,6 +2337,10 @@ public:
         case kMouse:
             s.input.mouse_sensitivity = kMouseSteps[std::clamp(value, 0, static_cast<int>(std::size(kMouseSteps)) - 1)];
             input_.settings.mouse_sensitivity = pt::InputSettings{}.mouse_sensitivity * s.input.mouse_sensitivity;
+            break;
+        case kMouseLock:
+            // read when play next takes the mouse (RunGame): the menu that shows this row has released it
+            s.input.mouse_lock = value == 1;
             break;
         case kGamepadSensitivity:
             s.input.gamepad_sensitivity = kGamepadSensitivitySteps[std::clamp(value, 0, static_cast<int>(std::size(kGamepadSensitivitySteps)) - 1)];
@@ -2730,6 +2730,7 @@ private:
         kMicHeard,
         kMicMonitor,
         kMouse,
+        kMouseLock,
         kGamepadSensitivity,
         kCameraTilt,
         kVibration,
@@ -4192,7 +4193,7 @@ int RunGame(App& app, pt::Vfs& vfs) {
                                       (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS);
             if (want_capture != mouse_capture_requested) {
                 mouse_capture_requested = want_capture;
-                if (want_capture && !options.mouse_lock) {
+                if (want_capture && !app.settings.input.mouse_lock) {
                     // no lock: the look comes from the pointer's own motion over the window, which stays free to leave it
                     mouse_captured = true;
                     pt::LogInfo("input: mouse look without pointer lock");
@@ -5595,6 +5596,9 @@ int main(int argc, char** argv) {
         }
         if (options.vsync_set) {
             app.settings.display.vsync = options.vsync;
+        }
+        if (options.mouse_lock_set) {
+            app.settings.input.mouse_lock = options.mouse_lock;
         }
         app.options.width = static_cast<uint32_t>(app.settings.display.width);
         app.options.height = static_cast<uint32_t>(app.settings.display.height);

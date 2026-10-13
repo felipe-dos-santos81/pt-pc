@@ -38,7 +38,8 @@ The log is the evidence. The game writes one line per milestone (input, floor, m
 - **Editor diagnostics before a configure are noise.** `compile_commands.json` appears in `build/macos/` once CMake has
   run; "`SDL3/SDL.h` file not found" means it has not.
 - **`mouse_captured` in `RunGame` means "the mouse drives the look".** It gates look and mouse buttons and is false in
-  menus. Without the lock it is true in play with no SDL relative mode (`docs/macos.md`, mouse in play).
+  menus. With `[input] mouse_lock` off (the macOS default) it is true in play with no SDL relative mode
+  (`docs/macos.md`, mouse in play).
 - **A PKG is not a game folder.** `--game` wants `chunk1.psarc` and `texture.qar` (`pathid_list_ps4.bin` beside them
   enables the enhanced textures). The extraction helper in `installer/Extractor` opens fake PKGs only and refuses store
   PKGs by design (`docs/installer.md`). It is not part of the macOS build, but it builds there with the .NET 10 SDK,

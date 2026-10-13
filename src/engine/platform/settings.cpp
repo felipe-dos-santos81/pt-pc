@@ -102,6 +102,7 @@ bool LoadAppSettings(const std::filesystem::path& path, AppSettings& out) {
     Read(v, "display.hdr", out.display.hdr);
     Read(v, "display.letterbox", out.display.letterbox);
     Read(v, "input.mouse_sensitivity", out.input.mouse_sensitivity);
+    Read(v, "input.mouse_lock", out.input.mouse_lock);
     Read(v, "input.gamepad_sensitivity", out.input.gamepad_sensitivity);
     Read(v, "input.gamepad_dead_zone", out.input.gamepad_dead_zone);
     Read(v, "input.rumble", out.input.rumble);
@@ -234,6 +235,8 @@ bool SaveAppSettings(const std::filesystem::path& path, const AppSettings& s) {
          << "letterbox = " << s.display.letterbox << "\n\n"
          << "[input]\n"
          << "mouse_sensitivity = " << s.input.mouse_sensitivity << "\n"
+         << "; 1 holds the pointer in the window in play, 0 leaves it free: the camera then stops turning at the window's edge\n"
+         << "mouse_lock = " << (s.input.mouse_lock ? 1 : 0) << "\n"
          << "; gamepad turn speed after the original stick response, 1 keeps the original\n"
          << "gamepad_sensitivity = " << s.input.gamepad_sensitivity << "\n"
          << "; per stick axis, as the original reads its pads (0.102 is the DualShock 4 dead zone)\n"

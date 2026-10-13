@@ -148,7 +148,7 @@ Xcode's command line tools and Homebrew, on Apple silicon or Intel. The build is
 installs the Homebrew packages it needs, configures, builds `build/macos/pt` and starts it in a window. `make help` lists
 every target, `test` and `app` (the app bundle and its zip) among them.
 
-In play the pointer is not locked to the window on macOS; `--mouse-lock` (`make run args=--mouse-lock`) locks it.
+In play the pointer is not locked to the window on macOS; **PC settings > Controls > Hold pointer in window** locks it.
 
 The Windows upscalers and the VR mode are left out, and MoltenVK has no ray queries. Upscaling is Apple MetalFX; on
 Apple silicon with macOS 26 or newer it can also interpolate one frame between rendered frames (experimental).

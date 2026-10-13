@@ -246,6 +246,8 @@ constexpr Entry kTexts[] = {
     {"pc_mic_say_jack", {"Say Jack into the selected microphone. This test does not advance the puzzle."}},
     {"pc_mic_monitor_note", {"Listen to your microphone. Headphones prevent feedback. Monitoring stops when you leave this test."}},
     {"pc_mouse", {"Mouse sensitivity"}},
+    {"pc_mouse_lock", {"Hold pointer in window"}},
+    {"pc_note_mouse_lock", {"Off, the pointer can leave the window and the camera stops turning at the window's edge."}},
     {"pc_gamepad_sensitivity", {"Gamepad look sensitivity"}},
     {"pc_camera_tilt", {"Camera tilt"}},
     {"pc_vibration", {"Vibration"}},

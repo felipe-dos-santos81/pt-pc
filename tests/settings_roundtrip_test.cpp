@@ -27,7 +27,7 @@ bool Same(const pt::AppSettings& a, const pt::AppSettings& b) {
     return x.hdr==y.hdr && x.fps_limit==y.fps_limit && a.audio.surround==b.audio.surround && a.audio.controller_speaker==b.audio.controller_speaker && Near(a.audio.controller_speaker_volume,b.audio.controller_speaker_volume) && a.input.rumble_profile==b.input.rumble_profile && x.width == y.width && x.height == y.height && x.fullscreen == y.fullscreen && x.vsync == y.vsync &&
            x.pause_on_focus_loss == y.pause_on_focus_loss && x.mute_in_background == y.mute_in_background && x.letterbox == y.letterbox &&
            Near(a.input.mouse_sensitivity, b.input.mouse_sensitivity) && Near(a.input.gamepad_sensitivity, b.input.gamepad_sensitivity) &&
-           Near(a.input.gamepad_dead_zone, b.input.gamepad_dead_zone) &&
+           Near(a.input.gamepad_dead_zone, b.input.gamepad_dead_zone) && a.input.mouse_lock == b.input.mouse_lock &&
            a.input.rumble == b.input.rumble && Near(a.camera.roll, b.camera.roll) && a.camera.third_person == b.camera.third_person && Near(a.audio.volume, b.audio.volume) &&
            a.voice.device == b.voice.device && a.voice.key == b.voice.key && a.upscaling.upscaler == b.upscaling.upscaler &&
            a.upscaling.quality == b.upscaling.quality && Near(a.upscaling.scale, b.upscaling.scale) &&
@@ -76,6 +76,7 @@ int main(int argc, char** argv) {
         {"display.letterbox 1", [](auto& s) { s.display.letterbox = 1; }},
         {"display.letterbox 2", [](auto& s) { s.display.letterbox = 2; }},
         {"input.mouse_sensitivity", [](auto& s) { s.input.mouse_sensitivity = 0.35f; }},
+        {"input.mouse_lock", [](auto& s) { s.input.mouse_lock = !s.input.mouse_lock; }},
         {"input.gamepad_sensitivity", [](auto& s) { s.input.gamepad_sensitivity = 1.5f; }},
         {"input.gamepad_dead_zone", [](auto& s) { s.input.gamepad_dead_zone = 0.25f; }},
         {"input.rumble", [](auto& s) { s.input.rumble = false; }},
