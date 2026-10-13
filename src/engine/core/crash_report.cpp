@@ -68,21 +68,21 @@ bool SDLCALL OnWindowsMessage(void*, MSG* msg) {
 }
 #endif
 
+#ifdef _WIN32
 void OnSignalAbort(int) {
     WriteCrashDump("abort()");
     LogExit(3, "abort");
 }
-
-#ifndef _WIN32
-/* No minidump outside Windows (docs/macos.md and docs/linux.md, crash dump): a fault leaves its signal and a backtrace in
-   pt.log instead. Everything goes straight to the log's descriptor (and stderr) with write and backtrace_symbols_fd, never
-   through LogWrite: its mutex may be held by the thread that faulted, and waiting for it would freeze the game instead of
-   ending it. The lines carry no timestamp for that reason. The handler is one-shot (SA_RESETHAND) and raises the signal
-   again, so the process still dies of it as before: the exit status is the signal's and the system writes its own report
-   (macOS: ~/Library/Logs/DiagnosticReports). No alternate stack: a stack overflow dies without a backtrace (sigaltstack and
-   SA_ONSTACK when one shows) */
+#else
+// No minidump outside Windows (docs/macos.md and docs/linux.md, crash dump): a fault or an abort leaves its signal and a
+// backtrace in pt.log instead. Everything goes straight to the log's descriptor (and stderr) with write and
+// backtrace_symbols_fd, never through LogWrite: its mutex may be held by the thread that faulted, and waiting for it would
+// freeze the game instead of ending it. The lines carry no timestamp for that reason. The handler is one-shot (SA_RESETHAND)
+// and raises the signal again, so the process still dies of it as before: the exit status is the signal's and the system
+// writes its own report (macOS: ~/Library/Logs/DiagnosticReports). No alternate stack: a stack overflow dies without a
+// backtrace (sigaltstack and SA_ONSTACK when one shows)
 void OnFatalSignal(int sig, siginfo_t* info, void*) {
-    const char* name = sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : "SIGFPE";
+    const char* name = sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : sig == SIGFPE ? "SIGFPE" : "SIGABRT";
     const int fd = LogFileDescriptor();
     char line[128];
     const auto put = [&](int length) {
@@ -113,13 +113,16 @@ void InstallCrashReporting(const std::filesystem::path& dump_dir, const std::str
     _set_invalid_parameter_handler(OnInvalidParameter);
     SetConsoleCtrlHandler(OnConsoleControl, TRUE);
     SDL_SetWindowsMessageHook(OnWindowsMessage, nullptr);
+    std::signal(SIGABRT, OnSignalAbort);
 #else
     struct sigaction fatal{};
     fatal.sa_sigaction = OnFatalSignal;
     fatal.sa_flags = SA_SIGINFO | SA_RESETHAND;
-    for (const int sig : {SIGSEGV, SIGBUS, SIGILL, SIGFPE}) sigaction(sig, &fatal, nullptr);
+    for (const int sig : {SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT}) sigaction(sig, &fatal, nullptr);
+    // glibc's first backtrace() loads libgcc_s (dlopen, malloc): done here, not in the handler
+    void* warm[1];
+    backtrace(warm, 1);
 #endif
-    std::signal(SIGABRT, OnSignalAbort);
     std::atexit(OnAtExit);
     std::set_terminate([] {
         if (const std::exception_ptr error = std::current_exception()) {
@@ -133,11 +136,20 @@ void InstallCrashReporting(const std::filesystem::path& dump_dir, const std::str
         } else {
             LogError("terminate: called with no active exception");
         }
+#ifdef _WIN32
         WriteCrashDump("std::terminate");
         LogExit(3, "terminate");
         std::_Exit(3);
+#else
+        // the abort is the signal handler's: backtrace, exit line, the system's own report
+        std::abort();
+#endif
     });
+#ifdef _WIN32
     LogInfo("crash reporting: build {}, dumps to {}", g_build, g_dump_dir.empty() ? std::string(".") : pt::os::PathToUtf8(g_dump_dir));
+#else
+    LogInfo("crash reporting: build {}, a backtrace in the log on a fault or abort", g_build);
+#endif
 }
 
 std::filesystem::path WriteCrashDump(const char* reason, void* exception_pointers) {
@@ -174,9 +186,14 @@ void FatalError(const std::string& reason, bool show_message, int code) {
     LogError("fatal: {}", reason);
     const std::filesystem::path dump = WriteCrashDump(reason.c_str());
     if (show_message) {
+#ifdef _WIN32
         const std::string text = "P.T. stopped: " + reason + "\n\nThe log and a crash dump were written to:\n" +
                                  (dump.empty() ? pt::os::PathToUtf8(g_dump_dir) : pt::os::PathToUtf8(dump.parent_path())) +
                                  "\n\nPlease send pt.log and the .dmp file with your report.";
+#else
+        const std::string text = "P.T. stopped: " + reason + "\n\nThe log was written to:\n" + pt::os::PathToUtf8(dump.empty() ? g_dump_dir : dump.parent_path()) +
+                                 "\n\nPlease send pt.log with your report.";
+#endif
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "P.T.", text.c_str(), nullptr);
     }
     LogExit(code, "fatal error");

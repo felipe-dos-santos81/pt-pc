@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -10,6 +11,11 @@
 struct SDL_Window;
 
 namespace pt::vk {
+
+// Whether the window's display shows HDR: Windows' switch (Settings > Display > Use HDR, DXGI through os.h), a Mac display's EDR
+// headroom over SDR white (SDL's display property, from NSScreen); nullopt where it cannot be told. The HDR row and the HDR
+// swapchain (Context::CreateSwapchain) follow it, since drivers offer the HDR formats on an SDR display as well
+std::optional<bool> DisplayHdrForWindow(SDL_Window* window);
 
 class Context;
 

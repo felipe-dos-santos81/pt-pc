@@ -20,7 +20,7 @@ Everything the engine needs from the operating system beyond SDL3 goes through `
 | enhanced textures | `realesrgan-ncnn-vulkan.exe` + `vcomp140.dll` | `realesrgan-ncnn-vulkan` (the project's ubuntu release, SHA-256 d0e8e1cf...) |
 | game folder search next to the executable | yes | yes (`pt::ExecutableDir`) |
 | folder picker when no game is found | `IFileOpenDialog` | none: a message box asks for `--game` |
-| crash dump | `MiniDumpWriteDump` | none; a fault (SIGSEGV, SIGBUS, SIGILL, SIGFPE) writes its name and a backtrace to `pt.log` (execinfo) and then dies of the signal, leaving the core dump to the system |
+| crash dump | `MiniDumpWriteDump` | none; a fault or abort (SIGSEGV, SIGBUS, SIGILL, SIGFPE, SIGABRT) writes its name and a backtrace to `pt.log` (execinfo; addresses only, the game is not linked with `-rdynamic`) and then dies of the signal, leaving the core dump to the system |
 
 Off on Linux: AMD FSR 3 and its frame generation, Intel XeSS and NVIDIA DLSS. Their SDKs ship Windows DLLs (and the DLSS
 link library used is the Windows one), so `PT_UPSCALERS` defaults to OFF outside Windows and the code already behind

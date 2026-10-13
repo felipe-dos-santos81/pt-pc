@@ -613,6 +613,21 @@ void Context::Shutdown() {
     instance = VK_NULL_HANDLE;
 }
 
+std::optional<bool> DisplayHdrForWindow(SDL_Window* window) {
+    if (!window) return std::nullopt;
+#if defined(_WIN32)
+    return pt::os::WindowDisplayHdr(SDL_GetPointerProperty(SDL_GetWindowProperties(window), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr));
+#elif defined(__APPLE__)
+    // the display's property, not the window's: SDL fills the window's at creation and on a display's own HDR change, but not
+    // when the window moves to another display, where the display's is current (docs/macos.md, HDR)
+    const SDL_DisplayID display = SDL_GetDisplayForWindow(window);
+    if (!display) return std::nullopt;
+    return SDL_GetBooleanProperty(SDL_GetDisplayProperties(display), SDL_PROP_DISPLAY_HDR_ENABLED_BOOLEAN, false);
+#else
+    return std::nullopt;
+#endif
+}
+
 bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync, bool want_hdr) {
     vkDeviceWaitIdle(device);
     swapchain_refused = false;
@@ -636,33 +651,26 @@ bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync, bool 
         LogInfo("vulkan: HDR requested{}; surface formats (format/color space):{}", swapchain_hooks ? ", but frame generation's swapchain is SDR only" : "",
                 offered);
     }
-#if defined(_WIN32) || defined(__APPLE__)
-    // an HDR swapchain on a display with Windows HDR off: Windows maps scRGB to SDR and cuts everything over SDR white, so the
-    // picture came out hard and contrasty (1.0.3 test). The display's own HDR state decides; SDR while it is off
-    // PT_HDR_IGNORE_DISPLAY=1 (tests): the HDR formats the driver offers are taken whatever Windows says
+    // an HDR swapchain on a display with HDR off: Windows maps scRGB to SDR and cuts everything over SDR white, so the picture
+    // came out hard and contrasty (1.0.3 test), and MoltenVK offers the extended-sRGB formats on an SDR Mac display just the
+    // same. The display's own HDR state decides (DisplayHdrForWindow); SDR while it is off
+    // PT_HDR_IGNORE_DISPLAY=1 (tests): the HDR formats the driver offers are taken whatever the display says
     static const bool ignore_display = std::getenv("PT_HDR_IGNORE_DISPLAY") != nullptr;
-    if (want_hdr && window_ && !ignore_display) {
-#ifdef _WIN32
-        void* hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(window_), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-        const std::optional<bool> display_hdr = pt::os::WindowDisplayHdr(hwnd);
-        const char* off = "off for this display in Windows (Settings > Display > Use HDR)";
-#else
-        // macOS: MoltenVK offers the extended-sRGB swapchain on an SDR display as well, with the same clipping; SDL's window
-        // property says whether the display has EDR headroom over SDR white (docs/macos.md, HDR)
-        const std::optional<bool> display_hdr = SDL_GetBooleanProperty(SDL_GetWindowProperties(window_), SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false);
-        const char* off = "this display has no HDR headroom";
-#endif
-        if (display_hdr && !*display_hdr) {
+    if (want_hdr && !ignore_display) {
+        if (const std::optional<bool> display_hdr = DisplayHdrForWindow(window_); display_hdr && !*display_hdr) {
             if (!hdr_off_logged_) {
-                LogWarn("vulkan: HDR is on in the game but {}: SDR is used", off);
+#ifdef _WIN32
+                LogWarn("vulkan: HDR is on in the game but off for this display in Windows (Settings > Display > Use HDR): SDR is used");
+#else
+                LogWarn("vulkan: HDR is on in the game but this display has no HDR headroom: SDR is used");
+#endif
                 hdr_off_logged_ = true;
             }
             want_hdr = false;
-        } else {
-            LogInfo("vulkan: HDR for this display: {}", display_hdr ? "on" : "unknown");
+        } else if (display_hdr) {
+            LogInfo("vulkan: HDR for this display: on");
         }
     }
-#endif
     if (!ChooseSwapchainSurfaceFormat(formats, want_hdr, !swapchain_hooks, chosen, hdr_selected)) {
         LogError("vulkan: surface has no supported SDR or HDR color format");
         return false;

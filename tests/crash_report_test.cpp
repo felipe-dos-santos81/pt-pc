@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <string_view>
 
 #include "engine/core/crash_report.h"
 #include "engine/core/log.h"

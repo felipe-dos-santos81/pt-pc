@@ -61,6 +61,7 @@ app: build ## [STEP 4] Make dist/P.T. PC Port.app and its zip, replacing the las
 
 # ── Development ───────────────────────────────────────────────────────────────
 
-test: $(BUILD_DIR)/build.ninja ## Build and run the pt_tests unit tests
-	cmake --build $(BUILD_DIR) --target pt_tests
+test: $(BUILD_DIR)/build.ninja ## Build and run the pt_tests unit tests and the crash handler test
+	cmake --build $(BUILD_DIR) --target pt_tests pt_crash_report_test
 	$(BUILD_DIR)/pt_tests
+	$(BUILD_DIR)/pt_crash_report_test

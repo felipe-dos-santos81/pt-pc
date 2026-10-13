@@ -628,8 +628,10 @@ struct App {
     pt::game::SubtitlePlayer* transcripts = nullptr;
     bool freecam_active = false;
     bool photo_active = false;
-    // Windows HDR for the window's display: 1 on, 0 off, -1 unknown (another system, or not read yet)
+    // HDR for the window's display (Windows' switch, a Mac display's EDR headroom): 1 on, 0 off, -1 unknown (another system,
+    // or not read yet); display_hdr_changed is SDL's word that it moved (SDL_EVENT_WINDOW_HDR_STATE_CHANGED), read in RunGame
     int display_hdr = -1;
+    bool display_hdr_changed = false;
     bool microphone_monitor = false;
     float microphone_db = -80.0f;
     std::string microphone_hypothesis;
@@ -3371,6 +3373,8 @@ bool PumpEvents(App& app, pt::InputDevice* input, bool& running, pt::KeyPressLat
             if (!app.settings_path.empty()) {
                 pt::SaveAppSettings(app.settings_path, app.settings);
             }
+        } else if (event.type == SDL_EVENT_WINDOW_HDR_STATE_CHANGED) {
+            app.display_hdr_changed = true;
         } else if (event.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
             app.renderer.Resize(static_cast<uint32_t>(event.window.data1), static_cast<uint32_t>(event.window.data2));
         }
@@ -3975,11 +3979,12 @@ int RunGame(App& app, pt::Vfs& vfs) {
     // DXGI factories all the time disturbed the borderless window's presentation (a black frame on alt-tab, stale captures)
     std::atomic<int> display_hdr{-1};
 #ifdef __APPLE__
-    // macOS: SDL's window property, from the display's EDR headroom over SDR white (NSScreen, read when SDL lists the display):
-    // a plain SDR display greys the row and keeps the SDR swapchain (vk_context.cpp CreateSwapchain), as HDR off in Windows
-    // does. The read costs nothing, so it stays on the game's thread; the display-change poll below re-reads it
+    // macOS: the display's EDR headroom through SDL (pt::DisplayHdrForWindow): a plain SDR display greys the row and keeps the
+    // SDR swapchain, as HDR off in Windows does. The read costs nothing, so it stays on the game's thread; the display-change
+    // poll below and SDL's HDR state event re-read it
     auto read_display_hdr = [&]() {
-        if (app.window) display_hdr.store(SDL_GetBooleanProperty(SDL_GetWindowProperties(app.window), SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false) ? 1 : 0);
+        const std::optional<bool> hdr_on = pt::vk::DisplayHdrForWindow(app.window);
+        display_hdr.store(hdr_on ? (*hdr_on ? 1 : 0) : -1);
     };
 #else
     // a plain thread joined before the next read and at the end (std::jthread is missing from the macOS 15 SDK's libc++)
@@ -4016,7 +4021,8 @@ int RunGame(App& app, pt::Vfs& vfs) {
         if (app.window) {
             const bool focus = (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
             const SDL_DisplayID id = SDL_GetDisplayForWindow(app.window);
-            if ((focus && !display_focus) || id != display_id) read_display_hdr();
+            if ((focus && !display_focus) || id != display_id || app.display_hdr_changed) read_display_hdr();
+            app.display_hdr_changed = false;
             display_focus = focus;
             display_id = id;
         }
