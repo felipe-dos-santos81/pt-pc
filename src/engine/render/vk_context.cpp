@@ -636,21 +636,30 @@ bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync, bool 
         LogInfo("vulkan: HDR requested{}; surface formats (format/color space):{}", swapchain_hooks ? ", but frame generation's swapchain is SDR only" : "",
                 offered);
     }
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__APPLE__)
     // an HDR swapchain on a display with Windows HDR off: Windows maps scRGB to SDR and cuts everything over SDR white, so the
     // picture came out hard and contrasty (1.0.3 test). The display's own HDR state decides; SDR while it is off
     // PT_HDR_IGNORE_DISPLAY=1 (tests): the HDR formats the driver offers are taken whatever Windows says
     static const bool ignore_display = std::getenv("PT_HDR_IGNORE_DISPLAY") != nullptr;
     if (want_hdr && window_ && !ignore_display) {
+#ifdef _WIN32
         void* hwnd = SDL_GetPointerProperty(SDL_GetWindowProperties(window_), SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
-        if (const std::optional<bool> display_hdr = pt::os::WindowDisplayHdr(hwnd); display_hdr && !*display_hdr) {
+        const std::optional<bool> display_hdr = pt::os::WindowDisplayHdr(hwnd);
+        const char* off = "off for this display in Windows (Settings > Display > Use HDR)";
+#else
+        // macOS: MoltenVK offers the extended-sRGB swapchain on an SDR display as well, with the same clipping; SDL's window
+        // property says whether the display has EDR headroom over SDR white (docs/macos.md, HDR)
+        const std::optional<bool> display_hdr = SDL_GetBooleanProperty(SDL_GetWindowProperties(window_), SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false);
+        const char* off = "this display has no HDR headroom";
+#endif
+        if (display_hdr && !*display_hdr) {
             if (!hdr_off_logged_) {
-                LogWarn("vulkan: HDR is on in the game but off for this display in Windows (Settings > Display > Use HDR): SDR is used");
+                LogWarn("vulkan: HDR is on in the game but {}: SDR is used", off);
                 hdr_off_logged_ = true;
             }
             want_hdr = false;
         } else {
-            LogInfo("vulkan: Windows HDR for this display: {}", display_hdr ? "on" : "unknown");
+            LogInfo("vulkan: HDR for this display: {}", display_hdr ? "on" : "unknown");
         }
     }
 #endif

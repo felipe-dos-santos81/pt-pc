@@ -26,6 +26,9 @@ constexpr Entry kTexts[] = {
     {"pc_hdr", {"HDR"}},
     {"pc_note_hdr_restart", {"Applies at once. Requires HDR turned on for the display in Windows; otherwise uses SDR."}},
     {"pc_note_hdr_windows_off", {"HDR is off for this display in Windows. Turn it on in Settings > Display > Use HDR to choose it here."}},
+    // macOS (docs/macos.md, HDR): English only for now, the other languages fall back to it (PcText)
+    {"pc_note_hdr_restart_mac", {"Applies at once. Needs a display with HDR headroom, such as the built-in XDR display; otherwise uses SDR."}},
+    {"pc_note_hdr_off_mac", {"This display has no HDR headroom. Move the window to an HDR display to choose it here."}},
     {"pc_surround", {"Surround output"}},
     {"pc_note_surround", {"Uses the output device's 5.1 or 7.1 layout after restarting. Stereo devices stay stereo."}},
     {"pc_rumble_profile", {"Rumble mode"}},

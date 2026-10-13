@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <initializer_list>
 
 #include <SDL3/SDL.h>
 
@@ -14,6 +15,10 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <dbghelp.h>
+#else
+#include <execinfo.h>
+#include <signal.h>
+#include <unistd.h>
 #endif
 
 namespace pt {
@@ -68,6 +73,31 @@ void OnSignalAbort(int) {
     LogExit(3, "abort");
 }
 
+#ifndef _WIN32
+/* No minidump outside Windows (docs/macos.md and docs/linux.md, crash dump): a fault leaves its signal and a backtrace in
+   pt.log instead. Everything goes straight to the log's descriptor (and stderr) with write and backtrace_symbols_fd, never
+   through LogWrite: its mutex may be held by the thread that faulted, and waiting for it would freeze the game instead of
+   ending it. The lines carry no timestamp for that reason. The handler is one-shot (SA_RESETHAND) and raises the signal
+   again, so the process still dies of it as before: the exit status is the signal's and the system writes its own report
+   (macOS: ~/Library/Logs/DiagnosticReports). No alternate stack: a stack overflow dies without a backtrace (sigaltstack and
+   SA_ONSTACK when one shows) */
+void OnFatalSignal(int sig, siginfo_t* info, void*) {
+    const char* name = sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : "SIGFPE";
+    const int fd = LogFileDescriptor();
+    char line[128];
+    const auto put = [&](int length) {
+        if (length <= 0) return;
+        if (fd >= 0) (void)write(fd, line, static_cast<size_t>(length));
+        (void)write(2, line, static_cast<size_t>(length));
+    };
+    put(std::snprintf(line, sizeof(line), "crash: %s at %p, backtrace:\n", name, info ? info->si_addr : nullptr));
+    void* frames[64];
+    backtrace_symbols_fd(frames, backtrace(frames, 64), fd >= 0 ? fd : 2);
+    put(std::snprintf(line, sizeof(line), "exit: code %d (crash)\n", 128 + sig));
+    raise(sig);
+}
+#endif
+
 void OnAtExit() {
     LogExit(-1, "exit without a recorded code");
 }
@@ -83,6 +113,11 @@ void InstallCrashReporting(const std::filesystem::path& dump_dir, const std::str
     _set_invalid_parameter_handler(OnInvalidParameter);
     SetConsoleCtrlHandler(OnConsoleControl, TRUE);
     SDL_SetWindowsMessageHook(OnWindowsMessage, nullptr);
+#else
+    struct sigaction fatal{};
+    fatal.sa_sigaction = OnFatalSignal;
+    fatal.sa_flags = SA_SIGINFO | SA_RESETHAND;
+    for (const int sig : {SIGSEGV, SIGBUS, SIGILL, SIGFPE}) sigaction(sig, &fatal, nullptr);
 #endif
     std::signal(SIGABRT, OnSignalAbort);
     std::atexit(OnAtExit);

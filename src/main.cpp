@@ -1955,8 +1955,13 @@ public:
         // as in other PC games: HDR can be chosen while the display runs in HDR (Windows: Settings > Display > Use HDR), and shows
         // off and greyed while it does not
         const bool hdr_available = app_.display_hdr != 0;
-        pt::game::PcSettingRow hdr = Row(kHdr, "pc_hdr", OffOn(), s.display.hdr && hdr_available ? 1 : 0,
-                                         hdr_available ? "pc_note_hdr_restart" : "pc_note_hdr_windows_off");
+#ifdef __APPLE__
+        // the notes name what decides it on each system: Windows' HDR switch, a Mac display's EDR headroom
+        const char* hdr_note = hdr_available ? "pc_note_hdr_restart_mac" : "pc_note_hdr_off_mac";
+#else
+        const char* hdr_note = hdr_available ? "pc_note_hdr_restart" : "pc_note_hdr_windows_off";
+#endif
+        pt::game::PcSettingRow hdr = Row(kHdr, "pc_hdr", OffOn(), s.display.hdr && hdr_available ? 1 : 0, hdr_note);
         hdr.enabled = hdr_available;
         display.rows.push_back(std::move(hdr));
         display.rows.push_back(Row(kFocusPause, "pc_focus_pause", OffOn(), s.display.pause_on_focus_loss ? 1 : 0, "pc_note_focus_pause"));
@@ -3969,6 +3974,14 @@ int RunGame(App& app, pt::Vfs& vfs) {
     // runs, the swapchain is made again with the output the display now offers. A read every second had been tried: creating
     // DXGI factories all the time disturbed the borderless window's presentation (a black frame on alt-tab, stale captures)
     std::atomic<int> display_hdr{-1};
+#ifdef __APPLE__
+    // macOS: SDL's window property, from the display's EDR headroom over SDR white (NSScreen, read when SDL lists the display):
+    // a plain SDR display greys the row and keeps the SDR swapchain (vk_context.cpp CreateSwapchain), as HDR off in Windows
+    // does. The read costs nothing, so it stays on the game's thread; the display-change poll below re-reads it
+    auto read_display_hdr = [&]() {
+        if (app.window) display_hdr.store(SDL_GetBooleanProperty(SDL_GetWindowProperties(app.window), SDL_PROP_WINDOW_HDR_ENABLED_BOOLEAN, false) ? 1 : 0);
+    };
+#else
     // a plain thread joined before the next read and at the end (std::jthread is missing from the macOS 15 SDK's libc++)
     struct JoinedThread {
         std::thread thread;
@@ -3985,6 +3998,7 @@ int RunGame(App& app, pt::Vfs& vfs) {
             display_hdr.store(hdr_on ? (*hdr_on ? 1 : 0) : -1);
         });
     };
+#endif
     read_display_hdr();
     bool display_focus = app.window && (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS) != 0;
     SDL_DisplayID display_id = app.window ? SDL_GetDisplayForWindow(app.window) : 0;
@@ -4014,7 +4028,7 @@ int RunGame(App& app, pt::Vfs& vfs) {
         if (const int now = display_hdr.load(); now >= 0 && now != display_hdr_seen) {
             app.display_hdr = now;
             if (display_hdr_seen >= 0) {
-                pt::LogInfo("display: Windows HDR turned {} for this display", now ? "on" : "off");
+                pt::LogInfo("display: HDR turned {} for this display", now ? "on" : "off");
                 app.renderer.RecheckOutput();
             }
             display_hdr_seen = now;
@@ -5431,9 +5445,10 @@ int main(int argc, char** argv) {
         for (const auto& warning : user_data.warnings) pt::LogWarn("user data: {}", warning);
     }
     pt::LogInfo("pt-port version {} ({})", pt::update::CurrentVersion(), pt::update::Platform());
-#ifdef _WIN32
-    // a minidump and a last line for every way the process ends that it controls (crash_report.h); the dumps go next to pt.log
+    // a minidump (Windows) or a backtrace in the log (the POSIX signals) and a last line for every way the process ends that it
+    // controls (crash_report.h); the dumps go next to pt.log
     pt::InstallCrashReporting(g_output_dir, PT_BUILD_ID);
+#ifdef _WIN32
     // PT_CRASH_UPLOAD_TEST=1: the crash report upload of a headless run, with the consent file's "always" (tests only)
     if (std::getenv("PT_CRASH_UPLOAD_TEST")) {
         pt::OfferCrashUpload(g_output_dir.empty() ? std::filesystem::path(".") : g_output_dir, std::string(pt::update::CurrentVersion()), false);

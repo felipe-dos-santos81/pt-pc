@@ -14,6 +14,9 @@ void LogWrite(LogLevel level, std::string_view text);
 void LogSetFile(const std::filesystem::path& path);
 // The main loop's frame; with PT_LOG_TICKS=1 every line carries it ("#2444" after the level), for timing events against captures
 void LogSetTick(uint64_t tick);
+// The log file's descriptor, -1 without a file: for a writer that cannot go through LogWrite (the crash handler's backtrace,
+// written by backtrace_symbols_fd straight to the descriptor; crash_report.cpp)
+int LogFileDescriptor();
 
 template <typename... Args>
 void LogDebug(std::format_string<Args...> fmt, Args&&... args) {

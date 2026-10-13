@@ -58,4 +58,9 @@ void LogSetTick(uint64_t tick) {
     g_tick = tick;
 }
 
+int LogFileDescriptor() {
+    // no lock: read from a signal handler, where the mutex may be held by the thread that crashed
+    return g_log_file ? fileno(g_log_file) : -1;
+}
+
 }

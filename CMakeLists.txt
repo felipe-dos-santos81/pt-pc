@@ -216,6 +216,12 @@ endforeach()
 add_executable(pt_tests tests/test_strcode.cpp)
 target_link_libraries(pt_tests PRIVATE pt_engine)
 
+if(NOT WIN32)
+  # the POSIX crash handler (crash_report.cpp): a forked child faults and the log must hold the signal and a backtrace
+  add_executable(pt_crash_report_test tests/crash_report_test.cpp)
+  target_link_libraries(pt_crash_report_test PRIVATE pt_engine)
+endif()
+
 add_executable(pt_voice_match_test tests/voice_match_test.cpp)
 target_link_libraries(pt_voice_match_test PRIVATE pt_engine)
 

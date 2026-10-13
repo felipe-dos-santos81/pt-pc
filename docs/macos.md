@@ -26,6 +26,10 @@ what has been tried on a Mac is in the credits below.
 4. macOS asks once for the microphone, for the part of the game that listens for the word. `[voice] key = J` in `pt.ini`
    works here too.
 
+Game Mode (macOS 14 or newer) engages while the game is in full screen (Alt+Enter, or `[display] fullscreen = 1` or `2`
+in `pt.ini`): the bundle opts in through its games category and the `GCSupportsGameMode` and `LSSupportsGameMode` keys
+(tools/macos/make_app.py). The windowed default does without it.
+
 Settings, the save, `pt.log` and the enhanced texture cache are in `~/Library/Application Support/pt-port/pt/`. Mods go
 in `mods/` in that folder (docs/modding.md), since the app bundle is no place for user files.
 
@@ -42,11 +46,12 @@ macOS takes the POSIX side of `src/engine/platform` (docs/linux.md), with these 
 | `LiveSplitClient` | no `MSG_NOSIGNAL` on macOS: `SO_NOSIGPIPE` is set on the socket |
 | mouse in play | the pointer stays visible and free to leave the window: the look follows its motion and the camera stops turning at the window's edge. **PC settings > Controls > Hold pointer in window** (`[input] mouse_lock = 1` in `pt.ini`, or `--mouse-lock` for one run) gives SDL's relative mouse mode as on Windows and Linux, where the setting is on by default |
 | window opened in the background | no pause menu before the controller's first tick (an app started from Finder or the Dock can lose the focus while it starts) |
+| HDR | MoltenVK's extended-sRGB swapchain (`VK_EXT_swapchain_colorspace`) when the window's display has EDR headroom over SDR white, read through SDL's window HDR property (NSScreen). On an SDR display the row is greyed and the swapchain stays SDR, as with HDR off in Windows: MoltenVK offers the HDR formats there too, where everything over SDR white would clip. `PT_HDR_IGNORE_DISPLAY=1` takes them regardless |
 | shadow maps | compared in the shader from a `textureGather` (`PT_SHADOW_GATHER`, shaders/lighting.glsl) instead of a comparison sampler: with one on the bindless `images[]` array SPIRV-Cross declares the whole array `depth2d`, and Metal reads the G-buffer's normal and material through it as one channel, which lit the hallway ceiling in blotches |
 | enhanced textures | the `realesrgan-ncnn-vulkan` macOS release (a universal binary, x86_64 and arm64, MoltenVK linked in; checked here by its Mach-O header), by SHA-256 |
 | missing GPU features | the device is checked for the features the renderer needs (`vk_context.cpp`) and the log names the one that is missing |
 | folder picker when no game is found | SDL's folder dialog (`NSOpenPanel`) |
-| crash dump | none |
+| crash dump | none; a fault (SIGSEGV, SIGBUS, SIGILL, SIGFPE) writes its name and a backtrace to `pt.log` (execinfo) and then dies of the signal, so macOS's own report still lands in `~/Library/Logs/DiagnosticReports` |
 
 Off on macOS, as on Linux: FSR 3, DLSS, XeSS (Windows SDKs) and the VR mode. MoltenVK has no ray queries, so the
 ray-traced shadows, ambient occlusion and reflections are greyed out in the settings; Metal has no sampler LOD bias,
@@ -108,7 +113,9 @@ zips have no loop browser previews; the game shoots them at the browser's first 
 ## Credits and what was tried
 
 - Apple silicon: ahm3texe (LoreanXavier/pt-pc pull request 4), M4, macOS 27: the 22 unit tests and the 28 walkthrough
-  scenarios; the bundle played the first room and the hallway. Not tried on M1 to M3 or on an older macOS.
+  scenarios; the bundle played the first room and the hallway. Not tried on M1 or M2 or on an older macOS.
+- Apple silicon, M3 Max, macOS 27.0.1 (this repository): 300 frames headless, the hello walkthrough, and a window with HDR
+  (the built-in XDR display) and MetalFX Quality, 2133x1200 to 3200x1800 at 60 fps.
 - ignusloki (github.com/ignusloki/pt-pc, `codex/macos-arm64-port`, preview 1 to 3): Apple silicon, M1 Pro. From that fork
   come the `SO_NOSIGPIPE` socket option, the check for missing GPU features, enabling the portability subset's features and
   the no-pause-before-the-first-tick fix. Their native macOS installer and the Fast Walk option are not part of this port.

@@ -136,6 +136,11 @@ def main():
             "LSMinimumSystemVersion": MINIMUM_MACOS,
             "LSArchitecturePriority": ["arm64" if arch == "arm64" else "x86_64"],
             "LSApplicationCategoryType": "public.app-category.games",
+            # Game Mode (docs/macos.md, Running): the games category plus the opt-in key, as Apple's DTS lays it out
+            # (developer.apple.com/forums/thread/782343); GC is the macOS 14 key, LS the macOS 26 one, and both are read.
+            # macOS engages it only in full screen, so the windowed default never gets it until the player switches
+            "GCSupportsGameMode": True,
+            "LSSupportsGameMode": True,
             "NSHighResolutionCapable": True,
             "NSSupportsAutomaticGraphicsSwitching": True,
             # the one part of the game that listens for a spoken word (README, What you need)
