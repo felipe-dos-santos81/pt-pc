@@ -18,7 +18,8 @@ the street, with the voice part included.
 - Your own copy of P.T. The port is built and tested with the US release, CUSA01127, as a dump folder from your console
   or a fake PKG made from that dump. The European and Japanese releases install too, with a note, but I have not seen
   their data myself. A store PKG cannot be used: it is encrypted for the console that owns it, and nothing here
-  decrypts it.
+  decrypts it. The game was delisted in 2015; a dump of the US release is preserved on the Internet Archive at
+  https://archive.org/details/cusa-01127.
 - Windows 10 or 11 (x64), Linux x86-64 with glibc 2.38 or newer (Ubuntu 24.04, Debian 13, Fedora 39, current Arch
   and SteamOS), or macOS 14 or newer on an Apple silicon or Intel Mac.
 - A GPU and driver with Vulkan 1.3; on macOS the port brings MoltenVK, which runs Vulkan on Metal. The optional
