@@ -83,16 +83,15 @@ void OnSignalAbort(int) {
 // backtrace (sigaltstack and SA_ONSTACK when one shows)
 void OnFatalSignal(int sig, siginfo_t* info, void*) {
     const char* name = sig == SIGSEGV ? "SIGSEGV" : sig == SIGBUS ? "SIGBUS" : sig == SIGILL ? "SIGILL" : sig == SIGFPE ? "SIGFPE" : "SIGABRT";
-    const int fd = LogFileDescriptor();
+    const int log = LogFileDescriptor();
+    const int fd = log >= 0 ? log : 2;
     char line[128];
     const auto put = [&](int length) {
-        if (length <= 0) return;
-        if (fd >= 0) (void)write(fd, line, static_cast<size_t>(length));
-        (void)write(2, line, static_cast<size_t>(length));
+        if (length > 0) (void)write(fd, line, static_cast<size_t>(length));
     };
-    put(std::snprintf(line, sizeof(line), "crash: %s at %p, backtrace:\n", name, info ? info->si_addr : nullptr));
+    put(std::snprintf(line, sizeof(line), "crash: %s at %p, backtrace:\n", name, info->si_addr));
     void* frames[64];
-    backtrace_symbols_fd(frames, backtrace(frames, 64), fd >= 0 ? fd : 2);
+    backtrace_symbols_fd(frames, backtrace(frames, 64), fd);
     put(std::snprintf(line, sizeof(line), "exit: code %d (crash)\n", 128 + sig));
     raise(sig);
 }
@@ -186,14 +185,10 @@ void FatalError(const std::string& reason, bool show_message, int code) {
     LogError("fatal: {}", reason);
     const std::filesystem::path dump = WriteCrashDump(reason.c_str());
     if (show_message) {
-#ifdef _WIN32
-        const std::string text = "P.T. stopped: " + reason + "\n\nThe log and a crash dump were written to:\n" +
-                                 (dump.empty() ? pt::os::PathToUtf8(g_dump_dir) : pt::os::PathToUtf8(dump.parent_path())) +
-                                 "\n\nPlease send pt.log and the .dmp file with your report.";
-#else
-        const std::string text = "P.T. stopped: " + reason + "\n\nThe log was written to:\n" + pt::os::PathToUtf8(dump.empty() ? g_dump_dir : dump.parent_path()) +
-                                 "\n\nPlease send pt.log with your report.";
-#endif
+        // a dump only where one was written (Windows); the dumps go next to the log
+        const std::string text = "P.T. stopped: " + reason + "\n\nThe log" + (dump.empty() ? "" : " and a crash dump") + " were written to:\n" +
+                                 pt::os::PathToUtf8(g_dump_dir) + "\n\nPlease send pt.log" + (dump.empty() ? "" : " and the .dmp file") +
+                                 " with your report.";
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "P.T.", text.c_str(), nullptr);
     }
     LogExit(code, "fatal error");

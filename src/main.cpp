@@ -3979,9 +3979,7 @@ int RunGame(App& app, pt::Vfs& vfs) {
     // DXGI factories all the time disturbed the borderless window's presentation (a black frame on alt-tab, stale captures)
     std::atomic<int> display_hdr{-1};
 #ifdef __APPLE__
-    // macOS: the display's EDR headroom through SDL (pt::DisplayHdrForWindow): a plain SDR display greys the row and keeps the
-    // SDR swapchain, as HDR off in Windows does. The read costs nothing, so it stays on the game's thread; the display-change
-    // poll below and SDL's HDR state event re-read it
+    // macOS: an SDL property read (pt::vk::DisplayHdrForWindow), cheap enough for the game's thread
     auto read_display_hdr = [&]() {
         const std::optional<bool> hdr_on = pt::vk::DisplayHdrForWindow(app.window);
         display_hdr.store(hdr_on ? (*hdr_on ? 1 : 0) : -1);

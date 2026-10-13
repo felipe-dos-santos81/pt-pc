@@ -659,11 +659,8 @@ bool Context::CreateSwapchain(uint32_t width, uint32_t height, bool vsync, bool 
     if (want_hdr && !ignore_display) {
         if (const std::optional<bool> display_hdr = DisplayHdrForWindow(window_); display_hdr && !*display_hdr) {
             if (!hdr_off_logged_) {
-#ifdef _WIN32
-                LogWarn("vulkan: HDR is on in the game but off for this display in Windows (Settings > Display > Use HDR): SDR is used");
-#else
-                LogWarn("vulkan: HDR is on in the game but this display has no HDR headroom: SDR is used");
-#endif
+                // the settings note names what to switch on each system (pc_note_hdr_windows_off, pc_note_hdr_off_mac)
+                LogWarn("vulkan: HDR is on in the game but off for this display: SDR is used");
                 hdr_off_logged_ = true;
             }
             want_hdr = false;

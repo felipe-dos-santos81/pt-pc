@@ -135,14 +135,10 @@ def liborbis_source() -> pathlib.Path:
         report["installer"] = "skipped: LibOrbisPkg source not found (--liborbis)"
         finish(1)
     source = BUILD / "liborbis-src"
-    if source.exists():
-        shutil.rmtree(source)
-    shutil.copytree(liborbis, source, ignore=shutil.ignore_patterns("bin", "obj", ".git"))
-    csproj = source / "LibOrbisPkg.Core" / "LibOrbisPkg.Core.csproj"
-    csproj.write_text(csproj.read_text(encoding="utf-8-sig").replace("netcoreapp3.0", "net10.0").replace("<LangVersion>7.3</LangVersion>", "<LangVersion>latest</LangVersion>")
-                      .replace("<GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>", "<GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>"),
-                      encoding="utf-8")
-    run("patch liborbis", [sys.executable, "tools/patch_liborbis_readers.py", source])
+    sys.path.insert(0, str(REPO / "tools"))
+    import patch_liborbis_readers  # the copy, the net10.0 csproj and the read fixes, shared with tools/make_extractor.py
+    patch_liborbis_readers.prepare(liborbis, source)
+    report["steps"].append({"step": "patch liborbis", "exit": 0})
     return source
 
 

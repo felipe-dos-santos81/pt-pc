@@ -9,8 +9,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <string>
-#include <string_view>
 
 #include "engine/core/crash_report.h"
 #include "engine/core/log.h"
@@ -42,11 +42,9 @@ int main() {
     }
     // a frame from backtrace_symbols_fd names the executable and an address on one line (the dump folder line has no address)
     bool frame = false;
-    for (size_t start = 0; start < text.size();) {
-        const size_t end = text.find('\n', start);
-        const std::string_view line(text.data() + start, (end == std::string::npos ? text.size() : end) - start);
-        frame = frame || (line.find("crash_report_test") != std::string_view::npos && line.find("0x") != std::string_view::npos);
-        start = end == std::string::npos ? text.size() : end + 1;
+    std::istringstream lines(text);
+    for (std::string line; std::getline(lines, line);) {
+        frame = frame || (line.find("crash_report_test") != std::string::npos && line.find("0x") != std::string::npos);
     }
     if (!frame) {
         std::printf("FAIL: the log holds no backtrace frame\n");

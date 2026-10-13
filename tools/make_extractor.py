@@ -4,10 +4,11 @@ and Linux installers get theirs from tools/ci/release.py; this is the Mac's way 
 Needs the .NET 10 SDK and git."""
 import argparse
 import platform
-import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+from patch_liborbis_readers import prepare
 
 REPO = Path(__file__).resolve().parent.parent
 LIBORBIS_GIT = "https://github.com/maxton/LibOrbisPkg.git"
@@ -16,19 +17,9 @@ LIBORBIS_GIT = "https://github.com/maxton/LibOrbisPkg.git"
 LIBORBIS_COMMIT = "643477263b2644e0803e0f58b8726ea4e3f3b7d4"
 
 
-def host_rid():
-    arm = platform.machine().lower() in ("arm64", "aarch64")
-    if sys.platform == "darwin":
-        return "osx-arm64" if arm else "osx-x64"
-    if sys.platform == "win32":
-        return "win-x64"
-    return "linux-arm64" if arm else "linux-x64"
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--liborbis", type=Path, help="a LibOrbisPkg clone (default: cloned into build/liborbis-upstream once)")
-    parser.add_argument("--rid", default=host_rid(), help=".NET runtime identifier (default: this machine's)")
     args = parser.parse_args()
     build = REPO / "build"
     upstream = args.liborbis or build / "liborbis-upstream"
@@ -40,18 +31,12 @@ def main():
     head = subprocess.run(["git", "-C", str(upstream), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
     if head and head != LIBORBIS_COMMIT:
         print(f"note: {upstream} is at {head[:7]}, the checked commit is {LIBORBIS_COMMIT[:7]}")
-    # a private copy, patched: the clone itself is never changed (the same edits as release.py's liborbis_source)
-    source = build / f"extractor-{args.rid}-src"
-    if source.exists():
-        shutil.rmtree(source)
-    shutil.copytree(upstream, source, ignore=shutil.ignore_patterns("bin", "obj", ".git"))
-    csproj = source / "LibOrbisPkg.Core" / "LibOrbisPkg.Core.csproj"
-    csproj.write_text(csproj.read_text(encoding="utf-8-sig").replace("netcoreapp3.0", "net10.0").replace("<LangVersion>7.3</LangVersion>", "<LangVersion>latest</LangVersion>")
-                      .replace("<GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>", "<GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>"),
-                      encoding="utf-8")
-    subprocess.run([sys.executable, str(REPO / "tools" / "patch_liborbis_readers.py"), str(source)], check=True)
-    out = build / f"extractor-{args.rid}"
-    subprocess.run(["dotnet", "publish", str(REPO / "installer" / "Extractor" / "Extractor.csproj"), "-c", "Release", "-r", args.rid,
+    source = build / "liborbis-src"
+    prepare(upstream, source)
+    # the runtime of this Mac (an Intel Mac builds osx-x64); the output folder carries it
+    rid = "osx-arm64" if platform.machine().lower() == "arm64" else "osx-x64"
+    out = build / f"extractor-{rid}"
+    subprocess.run(["dotnet", "publish", str(REPO / "installer" / "Extractor" / "Extractor.csproj"), "-c", "Release", "-r", rid,
                     "--self-contained", "true", f"-p:LibOrbisSource={source}", "-o", str(out)], check=True)
     print(f"{out / 'PT.PkgExtract'} <P.T. package> <empty output directory>")
 
