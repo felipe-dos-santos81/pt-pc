@@ -109,8 +109,7 @@ struct Options {
     bool dev_ui = false;
     bool validation = false;
     bool vsync = true;
-    bool mouse_lock = true;
-    bool mouse_lock_set = false;
+    std::optional<bool> mouse_lock;  // --mouse-lock, --no-mouse-lock: over pt.ini's [input] mouse_lock for this run
     std::filesystem::path screenshot;
     int frames = 3;
     bool script_test = false;
@@ -430,7 +429,6 @@ Options ParseOptions(int argc, char** argv) {
             options.vsync_set = true;
         } else if (arg == "--mouse-lock" || arg == "--no-mouse-lock") {
             options.mouse_lock = arg == "--mouse-lock";
-            options.mouse_lock_set = true;
         } else if (arg == "--mods" && has_value) {
             options.mods_dir = pt::os::PathFromUtf8(argv[++i]);
         } else if (arg == "--no-mods") {
@@ -4193,11 +4191,15 @@ int RunGame(App& app, pt::Vfs& vfs) {
                                       (SDL_GetWindowFlags(app.window) & SDL_WINDOW_INPUT_FOCUS);
             if (want_capture != mouse_capture_requested) {
                 mouse_capture_requested = want_capture;
-                if (want_capture && !app.settings.input.mouse_lock) {
-                    // no lock: the look comes from the pointer's own motion over the window, which stays free to leave it
+                if (!want_capture) {
+                    SDL_SetWindowRelativeMouseMode(app.window, false);
+                    SDL_SetWindowMouseGrab(app.window, false);
+                    mouse_captured = false;
+                } else if (!options.mouse_lock.value_or(app.settings.input.mouse_lock)) {
+                    // nothing to ask of SDL: the look reads the pointer's own motion
                     mouse_captured = true;
                     pt::LogInfo("input: mouse look without pointer lock");
-                } else if (want_capture) {
+                } else {
                     const bool relative = SDL_SetWindowRelativeMouseMode(app.window, true);
                     const std::string relative_error = relative ? std::string{} : SDL_GetError();
                     const bool grabbed = relative || SDL_SetWindowMouseGrab(app.window, true);
@@ -4212,10 +4214,6 @@ int RunGame(App& app, pt::Vfs& vfs) {
                         pt::LogWarn("input: cannot capture mouse with relative mode ({}) or SDL mouse grab ({}) (driver {})",
                                     relative_error, SDL_GetError(), driver ? driver : "none");
                     }
-                } else {
-                    SDL_SetWindowRelativeMouseMode(app.window, false);
-                    SDL_SetWindowMouseGrab(app.window, false);
-                    mouse_captured = false;
                 }
             }
         }
@@ -5596,9 +5594,6 @@ int main(int argc, char** argv) {
         }
         if (options.vsync_set) {
             app.settings.display.vsync = options.vsync;
-        }
-        if (options.mouse_lock_set) {
-            app.settings.input.mouse_lock = options.mouse_lock;
         }
         app.options.width = static_cast<uint32_t>(app.settings.display.width);
         app.options.height = static_cast<uint32_t>(app.settings.display.height);

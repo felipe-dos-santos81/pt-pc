@@ -24,8 +24,7 @@ struct AppSettings {
     } display;
     struct Input {
         float mouse_sensitivity = 1.0f;
-        // SDL's relative mouse mode in play: the pointer hidden and held in the window. Off, the look follows the pointer's own
-        // motion, the pointer is free to leave and the camera stops turning at the window's edge (the macOS default, docs/macos.md)
+        // SDL's relative mouse mode in play; off, the pointer is free to leave the window (docs/macos.md, mouse in play)
 #ifdef __APPLE__
         bool mouse_lock = false;
 #else
