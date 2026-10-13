@@ -44,8 +44,9 @@ install from desktop mode and add `pt` as a non-Steam game; it runs on SteamOS a
 
 macOS: download `P.T.PC.Port-macOS-arm64.zip` (M1 and later) or `P.T.PC.Port-macOS-x64.zip` (Intel), unzip `P.T. PC Port.app`,
 open it once and allow it under System Settings > Privacy & Security (it is not signed with a Developer ID), then pick your
-dump folder when it asks. A fake PKG has to be extracted on Windows or Linux first. Intel Macs need a GPU that MoltenVK can
-run the renderer on; the port was written without a Mac at hand and the Intel app has not been run on one yet. More in
+dump folder when it asks. A fake PKG is extracted on Windows or Linux first, or on the Mac with the helper that
+`make extractor` builds from the source (it needs the .NET 10 SDK). Intel Macs need a GPU that MoltenVK can run the
+renderer on; the port was written without a Mac at hand and the Intel app has not been run on one yet. More in
 docs/macos.md.
 
 Portable downloads: `P.T.PC.Port-portable-windows.zip` and `P.T.PC.Port-portable-linux.zip` hold the same files the
@@ -146,19 +147,23 @@ Xcode's command line tools and Homebrew, on Apple silicon or Intel. The build is
     make run game=<your extracted CUSA01127 folder>
 
 installs the Homebrew packages it needs, configures, builds `build/macos/pt` and starts it in a window. `make help` lists
-every target, `test` and `app` (the app bundle and its zip) among them.
+every target, `test`, `app` (the app bundle and its zip) and `extractor` (the fake PKG helper) among them.
 
 In play the pointer is not locked to the window on macOS; **PC settings > Controls > Hold pointer in window** locks it.
+The app opts into Game Mode, which macOS engages in fullscreen. HDR output is offered on a display with HDR headroom,
+such as the built-in XDR display.
 
 The Windows upscalers and the VR mode are left out, and MoltenVK has no ray queries. Upscaling is Apple MetalFX; on
 Apple silicon with macOS 26 or newer it can also interpolate one frame between rendered frames (experimental).
-`-DPT_METALFX=OFF` leaves both out. The commands without make and the rest are in docs/macos.md.
+`-DPT_METALFX=OFF` leaves both out. A crash leaves its signal and a backtrace at the end of `pt.log`. The commands
+without make and the rest are in docs/macos.md.
 
 ### Tests
 
 The unit tests are CMake targets (`pt_tests`, `pt_mods_test` and the others in CMakeLists.txt). `python
 tools/walkthrough.py --exe build/release/pt.exe --game <folder>` plays the whole game without a window through the
-scripted routes in `tests/walkthrough/` and checks the log; it is how I make sure a change did not break a loop.
+scripted routes in `tests/walkthrough/` and checks the log; it is how I make sure a change did not break a loop. The
+`voice` scenario speaks the word through Windows SAPI or macOS `say`.
 
 ### Installer
 

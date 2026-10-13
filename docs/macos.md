@@ -83,7 +83,9 @@ Xcode's command line tools (`xcode-select --install`), then from Homebrew `cmake
     cmake -G Ninja -B build/macos -DCMAKE_BUILD_TYPE=RelWithDebInfo
     cmake --build build/macos --target pt
 
-The Makefile wraps these steps: `make run game=<folder>` installs the packages, builds and starts the game (`make help`).
+The Makefile wraps these steps: `make run game=<folder>` installs the packages, builds and starts the game; `make test`
+runs the unit tests and the crash handler test, `make app` makes the bundle, `make extractor` builds the fake PKG helper
+(`make help`).
 
 The build is for the CPU of the Mac it runs on (arm64 or x86_64; `-DCMAKE_OSX_ARCHITECTURES=` names it). A universal build
 is refused: ggml's CPU variants for the voice recognizer are chosen per architecture. Build once on each kind of Mac, as the
